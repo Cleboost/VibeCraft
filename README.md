@@ -1,6 +1,6 @@
-# SatisForge
+# VibeCraft
 
-**SatisForge** est une application desktop multiplateforme qui permet de générer des vidéos satisfaisantes personnalisées. Développée avec Wails (Go pour le backend, React pour le frontend), elle offre un générateur par défaut et permet l'importation de générateurs personnalisés.
+**VibeCraft** est une application desktop multiplateforme qui permet de générer des vidéos satisfaisantes personnalisées. Développée avec Wails (Go pour le backend, React pour le frontend), elle offre un générateur par défaut et permet l'importation de générateurs personnalisés.
 
 ## 🚀 Fonctionnalités
 
