@@ -1,5 +1,4 @@
-import { VideoGenerator } from '@vibecraft/api';
-
+import { VideoGenerator } from '../utils/VideoGenerator';
 /**
  * Manifest du générateur de balle rebondissante
  */
