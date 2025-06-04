@@ -6,8 +6,6 @@ export function DeleteGenerator(arg1:string):Promise<void>;
 
 export function GetPlatformInfo():Promise<Record<string, string>>;
 
-export function Greet(arg1:string):Promise<string>;
-
 export function ListGenerators():Promise<Array<main.GeneratorInfo>>;
 
 export function LoadGenerator(arg1:string):Promise<string>;
