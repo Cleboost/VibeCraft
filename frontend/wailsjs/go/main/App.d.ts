@@ -45,8 +45,6 @@ export function MarkVersionAsSeen():Promise<void>;
 
 export function ReadTempFile(arg1:string):Promise<Array<number>>;
 
-export function ReadTempFileAsBase64(arg1:string):Promise<string>;
-
 export function SaveGenerator(arg1:string,arg2:string):Promise<void>;
 
 export function SaveGeneratorConfig(arg1:string,arg2:string):Promise<void>;
@@ -56,11 +54,3 @@ export function SaveTempFile(arg1:string,arg2:Array<number>):Promise<void>;
 export function SetLastSeenVersion(arg1:string):Promise<void>;
 
 export function ShouldShowChangelog():Promise<main.ChangelogResult>;
-
-export function TestFFmpeg():Promise<string>;
-
-export function TestFunction():Promise<string>;
-
-export function TestRestart():Promise<void>;
-
-export function TestShouldShowChangelog():Promise<boolean>;

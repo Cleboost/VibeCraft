@@ -86,10 +86,6 @@ export function ReadTempFile(arg1) {
   return window['go']['main']['App']['ReadTempFile'](arg1);
 }
 
-export function ReadTempFileAsBase64(arg1) {
-  return window['go']['main']['App']['ReadTempFileAsBase64'](arg1);
-}
-
 export function SaveGenerator(arg1, arg2) {
   return window['go']['main']['App']['SaveGenerator'](arg1, arg2);
 }
@@ -108,20 +104,4 @@ export function SetLastSeenVersion(arg1) {
 
 export function ShouldShowChangelog() {
   return window['go']['main']['App']['ShouldShowChangelog']();
-}
-
-export function TestFFmpeg() {
-  return window['go']['main']['App']['TestFFmpeg']();
-}
-
-export function TestFunction() {
-  return window['go']['main']['App']['TestFunction']();
-}
-
-export function TestRestart() {
-  return window['go']['main']['App']['TestRestart']();
-}
-
-export function TestShouldShowChangelog() {
-  return window['go']['main']['App']['TestShouldShowChangelog']();
 }
