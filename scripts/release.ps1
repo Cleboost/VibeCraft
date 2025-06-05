@@ -4,13 +4,6 @@ param(
     [string]$Version
 )
 
-# Fonction d'aide
-function Show-Usage {
-    Write-Host "Usage: .\release.ps1 <version>" -ForegroundColor Red
-    Write-Host "Exemple: .\release.ps1 1.0.1" -ForegroundColor Yellow
-    exit 1
-}
-
 # Validation du format de version
 if (-not ($Version -match '^[0-9]+\.[0-9]+\.[0-9]+(-.*)?$')) {
     Write-Host "Erreur: Format de version invalide. Utilisez le format: 1.0.0" -ForegroundColor Red
@@ -21,10 +14,10 @@ $TagVersion = "v$Version"
 
 Write-Host "🚀 Début du processus de release pour la version $Version" -ForegroundColor Yellow
 
-# Vérifier que nous sommes sur la branche main
+# Vérifier que nous sommes sur la branche main ou master
 $CurrentBranch = git branch --show-current
-if ($CurrentBranch -ne "main") {
-    Write-Host "Erreur: Vous devez être sur la branche main" -ForegroundColor Red
+if ($CurrentBranch -ne "main" -and $CurrentBranch -ne "master") {
+    Write-Host "Erreur: Vous devez être sur la branche main ou master" -ForegroundColor Red
     exit 1
 }
 
@@ -84,9 +77,9 @@ if ($LASTEXITCODE -ne 0) {
 
 # Push vers GitHub
 Write-Host "⬆️ Push vers GitHub..." -ForegroundColor Yellow
-git push origin main
+git push origin $CurrentBranch
 if ($LASTEXITCODE -ne 0) {
-    Write-Host "Erreur: Échec du push de la branche main" -ForegroundColor Red
+    Write-Host "Erreur: Échec du push de la branche $CurrentBranch" -ForegroundColor Red
     exit 1
 }
 
@@ -100,11 +93,10 @@ Write-Host "✅ Release $TagVersion créée avec succès !" -ForegroundColor Gre
 Write-Host "📦 L'action GitHub va maintenant builder et publier la release automatiquement" -ForegroundColor Green
 
 # Essayer d'obtenir l'URL du repository
-try {
-    $RemoteUrl = git remote get-url origin
+$RemoteUrl = git remote get-url origin 2>$null
+if ($RemoteUrl) {
     $RepoPath = $RemoteUrl -replace '.*github\.com[:/]([^.]*)(\.git)?.*', '$1'
     Write-Host "🔗 Surveillez: https://github.com/$RepoPath/actions" -ForegroundColor Green
-}
-catch {
+} else {
     Write-Host "🔗 Surveillez vos actions GitHub pour le progress du build" -ForegroundColor Green
-}
+} 
