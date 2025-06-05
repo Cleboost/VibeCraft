@@ -5,13 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
-	"syscall"
-	"time"
 
 	"VibeCraft/pkg/autoupdater"
 
@@ -189,39 +186,7 @@ func (a *App) InstallUpdateWithRestart(updateFile string) error {
 		return fmt.Errorf("impossible d'obtenir le chemin de l'exécutable pour le redémarrage: %w", err)
 	}
 
-	// Redémarrer selon la plateforme
-	go func() {
-		// Attendre que l'interface soit fermée
-		time.Sleep(2 * time.Second)
-
-		if runtime.GOOS == "windows" {
-			// Méthode 1: Approche directe
-			cmd := exec.Command(currentExe)
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				HideWindow:    false,      // On veut voir la nouvelle fenêtre
-				CreationFlags: 0x00000008, // DETACHED_PROCESS
-			}
-			err := cmd.Start()
-
-			// Méthode 2: Fallback avec PowerShell si la première échoue
-			if err != nil {
-				cmdPS := exec.Command("powershell", "-Command", "Start-Process", "-FilePath", currentExe)
-				cmdPS.SysProcAttr = &syscall.SysProcAttr{
-					HideWindow:    true,
-					CreationFlags: 0x08000000,
-				}
-				cmdPS.Start()
-			}
-		} else {
-			// Approche Unix/Linux
-			cmd := exec.Command("nohup", currentExe)
-			cmd.Start()
-		}
-
-		// Quitter l'ancienne instance
-		os.Exit(0)
-	}()
-
+	a.restartApplication(currentExe)
 	return nil
 }
 
@@ -346,28 +311,6 @@ func (a *App) TestRestart() error {
 	}
 
 	fmt.Printf("[DEBUG] Current executable: %s\n", currentExe)
-
-	go func() {
-		time.Sleep(3 * time.Second)
-		fmt.Printf("[DEBUG] Attempting restart...\n")
-
-		if runtime.GOOS == "windows" {
-			cmd := exec.Command(currentExe)
-			cmd.SysProcAttr = &syscall.SysProcAttr{
-				HideWindow:    false,
-				CreationFlags: 0x00000008,
-			}
-			err := cmd.Start()
-			fmt.Printf("[DEBUG] Restart command error: %v\n", err)
-		} else {
-			cmd := exec.Command("nohup", currentExe)
-			err := cmd.Start()
-			fmt.Printf("[DEBUG] Restart command error: %v\n", err)
-		}
-
-		fmt.Printf("[DEBUG] Exiting old process...\n")
-		os.Exit(0)
-	}()
-
+	a.testRestart(currentExe)
 	return nil
 }
