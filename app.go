@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"VibeCraft/pkg/autoupdater"
+	"VibeCraft/pkg/ffmpeg"
 
 	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
@@ -20,6 +21,7 @@ const AppVersion = "v1.1.8"
 type App struct {
 	ctx     context.Context
 	updater *autoupdater.Updater
+	ffmpeg  *ffmpeg.FFmpeg
 }
 
 type GeneratorInfo struct {
@@ -38,6 +40,7 @@ func NewApp() *App {
 
 	return &App{
 		updater: autoupdater.NewUpdater(AppVersion, githubRepo),
+		ffmpeg:  ffmpeg.NewFFmpeg(),
 	}
 }
 
@@ -161,6 +164,9 @@ func (a *App) LoadGeneratorConfig(packageId string) (string, error) {
 
 func (a *App) CheckForUpdates() (*autoupdater.UpdateInfo, error) {
 	if a.IsDevMode() {
+
+	}
+	if a.IsDevMode() {
 		return &autoupdater.UpdateInfo{
 			Available:      false,
 			CurrentVersion: AppVersion,
@@ -242,51 +248,35 @@ func (a *App) IsFirstTimeUser() bool {
 	versionPath := filepath.Join(homeDir, ".vibecraft", "last_seen_version.txt")
 	_, err := os.Stat(versionPath)
 
-	fmt.Printf("[DEBUG] IsFirstTimeUser - versionPath: %s\n", versionPath)
-	fmt.Printf("[DEBUG] IsFirstTimeUser - file exists error: %v\n", err)
-
 	if os.IsNotExist(err) {
-		fmt.Printf("[DEBUG] IsFirstTimeUser - File does not exist, returning true\n")
 		return true
 	}
 
-	fmt.Printf("[DEBUG] IsFirstTimeUser - File exists, returning false\n")
 	return false
 }
 
 func (a *App) ShouldShowChangelog() ChangelogResult {
-	fmt.Printf("[DEBUG] ShouldShowChangelog - Starting\n")
-
 	if a.IsDevMode() {
-		fmt.Printf("[DEBUG] ShouldShowChangelog - Dev mode detected, skipping changelog\n")
 		return ChangelogResult{ShouldShow: false, Version: a.GetAppVersion(), Error: ""}
 	}
 
 	currentVersion := a.GetAppVersion()
-	fmt.Printf("[DEBUG] ShouldShowChangelog - currentVersion: %s\n", currentVersion)
-
 	isFirstTime := a.IsFirstTimeUser()
-	fmt.Printf("[DEBUG] ShouldShowChangelog - isFirstTime: %t\n", isFirstTime)
 
 	if isFirstTime {
-		fmt.Printf("[DEBUG] ShouldShowChangelog - First time user, returning true\n")
 		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: ""}
 	}
 
 	lastSeenVersion, err := a.GetLastSeenVersion()
-	fmt.Printf("[DEBUG] ShouldShowChangelog - lastSeenVersion: %s, error: %v\n", lastSeenVersion, err)
 
 	if err != nil {
-		fmt.Printf("[DEBUG] ShouldShowChangelog - Error reading version, returning true\n")
 		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: err.Error()}
 	}
 
 	if lastSeenVersion != currentVersion {
-		fmt.Printf("[DEBUG] ShouldShowChangelog - Version mismatch, returning true\n")
 		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: ""}
 	}
 
-	fmt.Printf("[DEBUG] ShouldShowChangelog - No changelog needed, returning false\n")
 	return ChangelogResult{ShouldShow: false, Version: currentVersion, Error: ""}
 }
 
@@ -306,31 +296,85 @@ func (a *App) GetLatestReleaseInfo() (*autoupdater.UpdateInfo, error) {
 	return a.updater.CheckForUpdates()
 }
 
-func (a *App) TestFunction() string {
-	fmt.Printf("[DEBUG] TestFunction called\n")
-	return "Test successful"
+func (a *App) IsFFmpegInstalled() bool {
+	return a.ffmpeg.IsInstalled()
 }
 
-func (a *App) TestShouldShowChangelog() bool {
-	fmt.Printf("[DEBUG] TestShouldShowChangelog called\n")
+func (a *App) DownloadFFmpeg() error {
+	return a.ffmpeg.Download(func(progress float64) {
+		if a.ctx != nil {
+			wailsruntime.EventsEmit(a.ctx, "ffmpeg-download-progress", map[string]interface{}{
+				"progress": progress,
+			})
+		}
+	})
+}
+
+func (a *App) ConvertVideoToMP4(webmPath, mp4Path string) error {
 	homeDir, _ := os.UserHomeDir()
-	versionPath := filepath.Join(homeDir, ".vibecraft", "last_seen_version.txt")
-	_, err := os.Stat(versionPath)
-	fmt.Printf("[DEBUG] TestShouldShowChangelog - path: %s, err: %v\n", versionPath, err)
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
 
-	result := os.IsNotExist(err)
-	fmt.Printf("[DEBUG] TestShouldShowChangelog - file does not exist: %t\n", result)
-	return result
-}
+	webmFullPath := filepath.Join(tempDir, webmPath)
+	mp4FullPath := filepath.Join(tempDir, mp4Path)
 
-func (a *App) TestRestart() error {
-	fmt.Printf("[DEBUG] TestRestart called\n")
-	currentExe, err := os.Executable()
-	if err != nil {
-		return fmt.Errorf("impossible d'obtenir le chemin de l'exécutable: %w", err)
+	// Vérifier que le fichier WebM existe
+	if _, err := os.Stat(webmFullPath); os.IsNotExist(err) {
+		return fmt.Errorf("fichier WebM introuvable: %s", webmFullPath)
 	}
 
-	fmt.Printf("[DEBUG] Current executable: %s\n", currentExe)
-	a.testRestart(currentExe)
+	err := a.ffmpeg.ConvertWebMToMP4(webmFullPath, mp4FullPath)
+	if err != nil {
+		return fmt.Errorf("erreur conversion ffmpeg: %w", err)
+	}
+
+	// Vérifier que le fichier MP4 a été créé
+	if _, err := os.Stat(mp4FullPath); os.IsNotExist(err) {
+		return fmt.Errorf("fichier MP4 non créé: %s", mp4FullPath)
+	}
+
 	return nil
+}
+
+func (a *App) SaveTempFile(filename string, data []int) error {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	os.MkdirAll(tempDir, 0755)
+
+	byteData := make([]byte, len(data))
+	for i, v := range data {
+		byteData[i] = byte(v)
+	}
+
+	filePath := filepath.Join(tempDir, filename)
+	return os.WriteFile(filePath, byteData, 0644)
+}
+
+func (a *App) ReadTempFile(filename string) ([]int, error) {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	filePath := filepath.Join(tempDir, filename)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("erreur lecture %s: %w", filePath, err)
+	}
+
+	if len(data) == 0 {
+		return nil, fmt.Errorf("fichier vide: %s", filePath)
+	}
+
+	// Convertir []byte en []int pour une meilleure compatibilité avec JavaScript
+	intData := make([]int, len(data))
+	for i, b := range data {
+		intData[i] = int(b)
+	}
+
+	return intData, nil
+}
+
+func (a *App) DeleteTempFile(filename string) error {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	filePath := filepath.Join(tempDir, filename)
+	return os.Remove(filePath)
 }

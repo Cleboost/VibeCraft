@@ -26,7 +26,6 @@ const UpdateDialog = ({ isVisible, onClose }) => {
     if (window.runtime) {
       // Écouter les événements de progression de téléchargement
       window.runtime.EventsOn('download-progress', (progress) => {
-        console.log('Progression reçue:', progress);
         setDownloadProgress(progress.percent || 0);
       });
 

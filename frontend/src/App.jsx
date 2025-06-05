@@ -71,7 +71,7 @@ function App() {
             const releaseInfo = await GetLatestReleaseInfo();
             releaseNotes = releaseInfo?.releaseNotes || null;
           } catch (error) {
-            console.log('Impossible de récupérer les notes de version:', error);
+            // Erreur silencieuse pour les notes de version
           }
         }
         
@@ -112,7 +112,7 @@ function App() {
         setShowUpdateDialog(true);
       }
     } catch (error) {
-      console.log('Vérification des mises à jour échouée:', error);
+      // Erreur silencieuse pour la vérification des mises à jour
     }
   };
 
@@ -122,7 +122,7 @@ function App() {
       try {
         await MarkVersionAsSeen();
       } catch (error) {
-        console.log('Erreur lors de la sauvegarde de la version:', error);
+        // Erreur silencieuse pour la sauvegarde de version
       }
     }
   };
