@@ -18,12 +18,32 @@ export function GetAppVersion() {
   return window['go']['main']['App']['GetAppVersion']();
 }
 
+export function GetLastSeenVersion() {
+  return window['go']['main']['App']['GetLastSeenVersion']();
+}
+
+export function GetLatestReleaseInfo() {
+  return window['go']['main']['App']['GetLatestReleaseInfo']();
+}
+
 export function GetPlatformInfo() {
   return window['go']['main']['App']['GetPlatformInfo']();
 }
 
 export function InstallUpdate(arg1) {
   return window['go']['main']['App']['InstallUpdate'](arg1);
+}
+
+export function InstallUpdateWithRestart(arg1) {
+  return window['go']['main']['App']['InstallUpdateWithRestart'](arg1);
+}
+
+export function IsFirstRunAfterUpdate() {
+  return window['go']['main']['App']['IsFirstRunAfterUpdate']();
+}
+
+export function IsFirstTimeUser() {
+  return window['go']['main']['App']['IsFirstTimeUser']();
 }
 
 export function ListGenerators() {
@@ -38,10 +58,34 @@ export function LoadGeneratorConfig(arg1) {
   return window['go']['main']['App']['LoadGeneratorConfig'](arg1);
 }
 
+export function MarkVersionAsSeen() {
+  return window['go']['main']['App']['MarkVersionAsSeen']();
+}
+
 export function SaveGenerator(arg1, arg2) {
   return window['go']['main']['App']['SaveGenerator'](arg1, arg2);
 }
 
 export function SaveGeneratorConfig(arg1, arg2) {
   return window['go']['main']['App']['SaveGeneratorConfig'](arg1, arg2);
+}
+
+export function SetLastSeenVersion(arg1) {
+  return window['go']['main']['App']['SetLastSeenVersion'](arg1);
+}
+
+export function ShouldShowChangelog() {
+  return window['go']['main']['App']['ShouldShowChangelog']();
+}
+
+export function TestFunction() {
+  return window['go']['main']['App']['TestFunction']();
+}
+
+export function TestRestart() {
+  return window['go']['main']['App']['TestRestart']();
+}
+
+export function TestShouldShowChangelog() {
+  return window['go']['main']['App']['TestShouldShowChangelog']();
 }
