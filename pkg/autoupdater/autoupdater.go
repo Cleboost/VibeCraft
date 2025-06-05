@@ -15,7 +15,6 @@ import (
 	"golang.org/x/mod/semver"
 )
 
-// Release représente une release GitHub
 type Release struct {
 	TagName string  `json:"tag_name"`
 	Name    string  `json:"name"`
@@ -24,14 +23,12 @@ type Release struct {
 	URL     string  `json:"html_url"`
 }
 
-// Asset représente un asset d'une release
 type Asset struct {
 	Name               string `json:"name"`
 	BrowserDownloadURL string `json:"browser_download_url"`
 	Size               int64  `json:"size"`
 }
 
-// UpdateInfo contient les informations d'une mise à jour
 type UpdateInfo struct {
 	Available      bool   `json:"available"`
 	CurrentVersion string `json:"currentVersion"`
@@ -42,21 +39,18 @@ type UpdateInfo struct {
 	Size           int64  `json:"size"`
 }
 
-// UpdateProgress représente le progrès d'un téléchargement
 type UpdateProgress struct {
 	Downloaded int64 `json:"downloaded"`
 	Total      int64 `json:"total"`
 	Percent    int   `json:"percent"`
 }
 
-// Updater gère les mises à jour
 type Updater struct {
 	currentVersion string
 	githubRepo     string
 	httpClient     *http.Client
 }
 
-// NewUpdater crée une nouvelle instance d'Updater
 func NewUpdater(currentVersion, githubRepo string) *Updater {
 	return &Updater{
 		currentVersion: currentVersion,
@@ -67,7 +61,6 @@ func NewUpdater(currentVersion, githubRepo string) *Updater {
 	}
 }
 
-// CheckForUpdates vérifie s'il y a des mises à jour disponibles
 func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 	url := fmt.Sprintf("https://api.github.com/repos/%s/releases/latest", u.githubRepo)
 
@@ -86,7 +79,6 @@ func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 		return nil, fmt.Errorf("erreur lors du décodage de la réponse: %w", err)
 	}
 
-	// Normaliser les versions pour la comparaison
 	currentVer := u.normalizeVersion(u.currentVersion)
 	latestVer := u.normalizeVersion(release.TagName)
 
@@ -97,11 +89,9 @@ func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 		ReleaseURL:     release.URL,
 	}
 
-	// Vérifier si une mise à jour est disponible
 	if semver.Compare(currentVer, latestVer) < 0 {
 		updateInfo.Available = true
 
-		// Trouver l'asset approprié pour la plateforme actuelle
 		asset, err := u.findAssetForPlatform(release.Assets)
 		if err != nil {
 			return updateInfo, err
@@ -114,7 +104,6 @@ func (u *Updater) CheckForUpdates() (*UpdateInfo, error) {
 	return updateInfo, nil
 }
 
-// normalizeVersion s'assure que la version commence par 'v'
 func (u *Updater) normalizeVersion(version string) string {
 	if !strings.HasPrefix(version, "v") {
 		return "v" + version
@@ -122,7 +111,6 @@ func (u *Updater) normalizeVersion(version string) string {
 	return version
 }
 
-// findAssetForPlatform trouve l'asset correspondant à la plateforme actuelle
 func (u *Updater) findAssetForPlatform(assets []Asset) (*Asset, error) {
 	platformSuffix := u.getPlatformSuffix()
 
@@ -135,7 +123,6 @@ func (u *Updater) findAssetForPlatform(assets []Asset) (*Asset, error) {
 	return nil, fmt.Errorf("aucun asset trouvé pour la plateforme %s", platformSuffix)
 }
 
-// getPlatformSuffix retourne le suffixe de plateforme pour les assets
 func (u *Updater) getPlatformSuffix() string {
 	switch runtime.GOOS {
 	case "windows":
@@ -149,7 +136,6 @@ func (u *Updater) getPlatformSuffix() string {
 	}
 }
 
-// DownloadUpdate télécharge la mise à jour avec un callback de progrès
 func (u *Updater) DownloadUpdate(downloadURL string, progressCallback func(UpdateProgress)) (string, error) {
 	resp, err := u.httpClient.Get(downloadURL)
 	if err != nil {
@@ -161,7 +147,6 @@ func (u *Updater) DownloadUpdate(downloadURL string, progressCallback func(Updat
 		return "", fmt.Errorf("erreur HTTP lors du téléchargement: %d", resp.StatusCode)
 	}
 
-	// Créer un fichier temporaire
 	tmpDir := os.TempDir()
 	filename := filepath.Base(downloadURL)
 	tmpFile := filepath.Join(tmpDir, filename)
@@ -172,7 +157,6 @@ func (u *Updater) DownloadUpdate(downloadURL string, progressCallback func(Updat
 	}
 	defer out.Close()
 
-	// Télécharger avec suivi de progrès
 	totalSize := resp.ContentLength
 	downloaded := int64(0)
 
@@ -206,33 +190,46 @@ func (u *Updater) DownloadUpdate(downloadURL string, progressCallback func(Updat
 	return tmpFile, nil
 }
 
-// InstallUpdate installe la mise à jour téléchargée
 func (u *Updater) InstallUpdate(updateFile string) error {
-	// Obtenir le chemin de l'exécutable actuel
+	return u.InstallUpdateWithProgress(updateFile, nil)
+}
+
+func (u *Updater) InstallUpdateWithProgress(updateFile string, progressCallback func(string)) error {
+	if progressCallback != nil {
+		progressCallback("Démarrage de l'installation...")
+	}
+
 	currentExe, err := os.Executable()
 	if err != nil {
 		return fmt.Errorf("impossible d'obtenir le chemin de l'exécutable: %w", err)
 	}
 
-	// Sur Windows, on s'attend à un ZIP
-	if runtime.GOOS == "windows" {
-		return u.installWindowsUpdate(updateFile, currentExe)
+	if progressCallback != nil {
+		progressCallback("Préparation de l'installation...")
 	}
 
-	// Sur autres plateformes, remplacer directement l'exécutable
-	return u.replaceExecutable(updateFile, currentExe)
+	if runtime.GOOS == "windows" {
+		return u.installWindowsUpdateWithProgress(updateFile, currentExe, progressCallback)
+	}
+
+	return u.replaceExecutableWithProgress(updateFile, currentExe, progressCallback)
 }
 
-// installWindowsUpdate installe une mise à jour sur Windows (ZIP)
-func (u *Updater) installWindowsUpdate(zipFile, currentExe string) error {
-	// Extraire le ZIP
+func (u *Updater) installWindowsUpdateWithProgress(zipFile, currentExe string, progressCallback func(string)) error {
+	if progressCallback != nil {
+		progressCallback("Ouverture du fichier de mise à jour...")
+	}
+
 	r, err := zip.OpenReader(zipFile)
 	if err != nil {
 		return fmt.Errorf("erreur lors de l'ouverture du ZIP: %w", err)
 	}
 	defer r.Close()
 
-	// Trouver l'exécutable dans le ZIP
+	if progressCallback != nil {
+		progressCallback("Recherche de l'exécutable...")
+	}
+
 	var exeFile *zip.File
 	for _, f := range r.File {
 		if strings.HasSuffix(strings.ToLower(f.Name), ".exe") {
@@ -245,14 +242,16 @@ func (u *Updater) installWindowsUpdate(zipFile, currentExe string) error {
 		return fmt.Errorf("aucun exécutable trouvé dans le ZIP")
 	}
 
-	// Extraire l'exécutable
+	if progressCallback != nil {
+		progressCallback("Extraction de l'exécutable...")
+	}
+
 	rc, err := exeFile.Open()
 	if err != nil {
 		return fmt.Errorf("erreur lors de l'ouverture de l'exécutable: %w", err)
 	}
 	defer rc.Close()
 
-	// Créer le nouveau fichier temporaire
 	newExe := currentExe + ".new"
 	out, err := os.Create(newExe)
 	if err != nil {
@@ -265,57 +264,81 @@ func (u *Updater) installWindowsUpdate(zipFile, currentExe string) error {
 		return fmt.Errorf("erreur lors de la copie: %w", err)
 	}
 
-	// Fermer le fichier avant de tenter de le renommer
 	out.Close()
 
-	// Sauvegarder l'ancien exécutable
+	if progressCallback != nil {
+		progressCallback("Sauvegarde de l'ancienne version...")
+	}
+
 	oldExe := currentExe + ".old"
 	if err := os.Rename(currentExe, oldExe); err != nil {
 		return fmt.Errorf("erreur lors de la sauvegarde de l'ancien exécutable: %w", err)
 	}
 
-	// Remplacer par le nouveau
+	if progressCallback != nil {
+		progressCallback("Installation de la nouvelle version...")
+	}
+
 	if err := os.Rename(newExe, currentExe); err != nil {
-		// Restaurer l'ancien en cas d'échec
 		os.Rename(oldExe, currentExe)
 		return fmt.Errorf("erreur lors du remplacement de l'exécutable: %w", err)
 	}
 
-	// Nettoyer
+	if progressCallback != nil {
+		progressCallback("Nettoyage...")
+	}
+
 	os.Remove(oldExe)
 	os.Remove(zipFile)
+
+	if progressCallback != nil {
+		progressCallback("Installation terminée avec succès !")
+	}
 
 	return nil
 }
 
-// replaceExecutable remplace l'exécutable directement (Linux/macOS)
-func (u *Updater) replaceExecutable(newExe, currentExe string) error {
-	// Sauvegarder l'ancien exécutable
+func (u *Updater) replaceExecutableWithProgress(newExe, currentExe string, progressCallback func(string)) error {
+	if progressCallback != nil {
+		progressCallback("Sauvegarde de l'ancienne version...")
+	}
+
 	oldExe := currentExe + ".old"
 	if err := os.Rename(currentExe, oldExe); err != nil {
 		return fmt.Errorf("erreur lors de la sauvegarde de l'ancien exécutable: %w", err)
 	}
 
-	// Copier le nouveau
+	if progressCallback != nil {
+		progressCallback("Installation de la nouvelle version...")
+	}
+
 	if err := copyFile(newExe, currentExe); err != nil {
-		// Restaurer l'ancien en cas d'échec
 		os.Rename(oldExe, currentExe)
 		return fmt.Errorf("erreur lors de la copie du nouveau fichier: %w", err)
 	}
 
-	// Rendre exécutable
+	if progressCallback != nil {
+		progressCallback("Configuration des permissions...")
+	}
+
 	if err := os.Chmod(currentExe, 0755); err != nil {
 		return fmt.Errorf("erreur lors de la définition des permissions: %w", err)
 	}
 
-	// Nettoyer
+	if progressCallback != nil {
+		progressCallback("Nettoyage...")
+	}
+
 	os.Remove(oldExe)
 	os.Remove(newExe)
+
+	if progressCallback != nil {
+		progressCallback("Installation terminée avec succès !")
+	}
 
 	return nil
 }
 
-// copyFile copie un fichier
 func copyFile(src, dst string) error {
 	in, err := os.Open(src)
 	if err != nil {
