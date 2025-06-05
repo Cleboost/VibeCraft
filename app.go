@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -10,55 +11,56 @@ import (
 	"strings"
 
 	"VibeCraft/pkg/autoupdater"
+	"VibeCraft/pkg/ffmpeg"
+
+	wailsruntime "github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// App struct
+const AppVersion = "v1.2.8"
+
 type App struct {
 	ctx     context.Context
 	updater *autoupdater.Updater
+	ffmpeg  *ffmpeg.FFmpeg
 }
 
-// GeneratorInfo représente les informations d'un générateur
 type GeneratorInfo struct {
 	Name     string `json:"name"`
 	Filename string `json:"filename"`
 }
 
-// NewApp creates a new App application struct
+type ChangelogResult struct {
+	ShouldShow bool   `json:"shouldShow"`
+	Version    string `json:"version"`
+	Error      string `json:"error"`
+}
+
 func NewApp() *App {
-	// Version actuelle de l'application - à modifier lors des releases
-	currentVersion := "v1.0.2"
-	// Repository GitHub - à modifier avec votre repository
 	githubRepo := "cleboost/VibeCraft"
 
 	return &App{
-		updater: autoupdater.NewUpdater(currentVersion, githubRepo),
+		updater: autoupdater.NewUpdater(AppVersion, githubRepo),
+		ffmpeg:  ffmpeg.NewFFmpeg(),
 	}
 }
 
-// startup is called when the app starts. The context is saved
-// so we can call the runtime methods
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
-	// Créer le dossier des générateurs s'il n'existe pas
 	generatorsDir := a.getGeneratorsDir()
 	os.MkdirAll(generatorsDir, 0755)
 }
 
-// getGeneratorsDir retourne le chemin vers le dossier des générateurs
 func (a *App) getGeneratorsDir() string {
 	homeDir, _ := os.UserHomeDir()
 	return filepath.Join(homeDir, ".vibecraft", "generators")
 }
 
-// SaveGenerator sauvegarde un générateur dans le dossier local
 func (a *App) SaveGenerator(filename string, content string) error {
 	generatorsDir := a.getGeneratorsDir()
 	filePath := filepath.Join(generatorsDir, filename)
 	return os.WriteFile(filePath, []byte(content), 0644)
 }
 
-// LoadGenerator charge le contenu d'un générateur
 func (a *App) LoadGenerator(filename string) (string, error) {
 	generatorsDir := a.getGeneratorsDir()
 	filePath := filepath.Join(generatorsDir, filename)
@@ -69,15 +71,12 @@ func (a *App) LoadGenerator(filename string) (string, error) {
 	return string(content), nil
 }
 
-// extractGeneratorName extrait le nom du générateur depuis le contenu du fichier
 func (a *App) extractGeneratorName(content string) string {
-	// Rechercher les patterns "class ClassName" pour extraire le nom
 	classRegex := regexp.MustCompile(`class\s+(\w+)\s*extends\s+VideoGenerator`)
 	if matches := classRegex.FindStringSubmatch(content); len(matches) > 1 {
 		return matches[1]
 	}
 
-	// Fallback: rechercher n'importe quelle classe
 	classRegex = regexp.MustCompile(`class\s+(\w+)`)
 	if matches := classRegex.FindStringSubmatch(content); len(matches) > 1 {
 		return matches[1]
@@ -86,20 +85,17 @@ func (a *App) extractGeneratorName(content string) string {
 	return "Générateur inconnu"
 }
 
-// ListGenerators retourne la liste des générateurs disponibles
 func (a *App) ListGenerators() ([]GeneratorInfo, error) {
 	generatorsDir := a.getGeneratorsDir()
 	var generators []GeneratorInfo
 
-	// Lister les fichiers dans le dossier des générateurs
 	files, err := os.ReadDir(generatorsDir)
 	if err != nil {
-		return generators, nil // Retourner une liste vide si le dossier n'existe pas
+		return generators, nil
 	}
 
 	for _, file := range files {
 		if filepath.Ext(file.Name()) == ".js" {
-			// Lire le contenu pour extraire le nom du générateur
 			content, err := a.LoadGenerator(file.Name())
 			generatorName := file.Name()
 			if err == nil {
@@ -107,7 +103,6 @@ func (a *App) ListGenerators() ([]GeneratorInfo, error) {
 				if extractedName != "Générateur inconnu" {
 					generatorName = extractedName
 				} else {
-					// Utiliser le nom de fichier sans extension
 					generatorName = strings.TrimSuffix(file.Name(), ".js")
 				}
 			}
@@ -122,14 +117,12 @@ func (a *App) ListGenerators() ([]GeneratorInfo, error) {
 	return generators, nil
 }
 
-// DeleteGenerator supprime un générateur
 func (a *App) DeleteGenerator(filename string) error {
 	generatorsDir := a.getGeneratorsDir()
 	filePath := filepath.Join(generatorsDir, filename)
 	return os.Remove(filePath)
 }
 
-// GetPlatformInfo retourne des informations sur la plateforme
 func (a *App) GetPlatformInfo() map[string]string {
 	return map[string]string{
 		"os":   runtime.GOOS,
@@ -137,13 +130,11 @@ func (a *App) GetPlatformInfo() map[string]string {
 	}
 }
 
-// Sauvegarde la config d'un générateur dans ~/.vibecraft/generator-configs.json
 func (a *App) SaveGeneratorConfig(packageId string, config string) error {
 	homeDir, _ := os.UserHomeDir()
 	configPath := filepath.Join(homeDir, ".vibecraft", "generator-configs.json")
 	var allConfigs map[string]json.RawMessage
 
-	// Lire l'existant
 	data, _ := os.ReadFile(configPath)
 	if len(data) > 0 {
 		json.Unmarshal(data, &allConfigs)
@@ -156,13 +147,12 @@ func (a *App) SaveGeneratorConfig(packageId string, config string) error {
 	return os.WriteFile(configPath, out, 0644)
 }
 
-// Charge la config d'un générateur depuis ~/.vibecraft/generator-configs.json
 func (a *App) LoadGeneratorConfig(packageId string) (string, error) {
 	homeDir, _ := os.UserHomeDir()
 	configPath := filepath.Join(homeDir, ".vibecraft", "generator-configs.json")
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		return "", nil // Pas d'erreur si le fichier n'existe pas
+		return "", nil
 	}
 	var allConfigs map[string]json.RawMessage
 	json.Unmarshal(data, &allConfigs)
@@ -172,28 +162,219 @@ func (a *App) LoadGeneratorConfig(packageId string) (string, error) {
 	return "", nil
 }
 
-// CheckForUpdates vérifie s'il y a des mises à jour disponibles
 func (a *App) CheckForUpdates() (*autoupdater.UpdateInfo, error) {
+	if a.IsDevMode() {
+
+	}
+	if a.IsDevMode() {
+		return &autoupdater.UpdateInfo{
+			Available:      false,
+			CurrentVersion: AppVersion,
+			LatestVersion:  AppVersion,
+		}, nil
+	}
 	return a.updater.CheckForUpdates()
 }
 
-// DownloadUpdate télécharge une mise à jour
 func (a *App) DownloadUpdate(downloadURL string) (string, error) {
 	return a.updater.DownloadUpdate(downloadURL, func(progress autoupdater.UpdateProgress) {
-		// Emettre l'événement de progrès vers le frontend
 		if a.ctx != nil {
-			// Utiliser les événements Wails pour notifier le frontend
-			// runtime.EventsEmit(a.ctx, "download-progress", progress)
+			wailsruntime.EventsEmit(a.ctx, "download-progress", progress)
 		}
 	})
 }
 
-// InstallUpdate installe la mise à jour téléchargée
 func (a *App) InstallUpdate(updateFile string) error {
 	return a.updater.InstallUpdate(updateFile)
 }
 
-// GetAppVersion retourne la version actuelle de l'application
+func (a *App) InstallUpdateWithRestart(updateFile string) error {
+	err := a.updater.InstallUpdate(updateFile)
+	if err != nil {
+		return err
+	}
+
+	currentExe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("impossible d'obtenir le chemin de l'exécutable pour le redémarrage: %w", err)
+	}
+
+	a.restartApplication(currentExe)
+	return nil
+}
+
 func (a *App) GetAppVersion() string {
-	return "v1.0.2" // À synchroniser avec NewApp
+	return AppVersion
+}
+
+func (a *App) GetLastSeenVersion() (string, error) {
+	homeDir, _ := os.UserHomeDir()
+	versionPath := filepath.Join(homeDir, ".vibecraft", "last_seen_version.txt")
+	data, err := os.ReadFile(versionPath)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(data)), nil
+}
+
+func (a *App) SetLastSeenVersion(version string) error {
+	homeDir, _ := os.UserHomeDir()
+	vibecraftDir := filepath.Join(homeDir, ".vibecraft")
+	os.MkdirAll(vibecraftDir, 0755)
+
+	versionPath := filepath.Join(vibecraftDir, "last_seen_version.txt")
+	return os.WriteFile(versionPath, []byte(version), 0644)
+}
+
+func (a *App) IsFirstRunAfterUpdate() (bool, string, error) {
+	currentVersion := a.GetAppVersion()
+	lastSeenVersion, err := a.GetLastSeenVersion()
+
+	if err != nil {
+		a.SetLastSeenVersion(currentVersion)
+		return false, "", nil
+	}
+
+	if lastSeenVersion != currentVersion {
+		return true, lastSeenVersion, nil
+	}
+
+	return false, "", nil
+}
+
+func (a *App) IsFirstTimeUser() bool {
+	homeDir, _ := os.UserHomeDir()
+
+	versionPath := filepath.Join(homeDir, ".vibecraft", "last_seen_version.txt")
+	_, err := os.Stat(versionPath)
+
+	if os.IsNotExist(err) {
+		return true
+	}
+
+	return false
+}
+
+func (a *App) ShouldShowChangelog() ChangelogResult {
+	if a.IsDevMode() {
+		return ChangelogResult{ShouldShow: false, Version: a.GetAppVersion(), Error: ""}
+	}
+
+	currentVersion := a.GetAppVersion()
+	isFirstTime := a.IsFirstTimeUser()
+
+	if isFirstTime {
+		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: ""}
+	}
+
+	lastSeenVersion, err := a.GetLastSeenVersion()
+
+	if err != nil {
+		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: err.Error()}
+	}
+
+	if lastSeenVersion != currentVersion {
+		return ChangelogResult{ShouldShow: true, Version: currentVersion, Error: ""}
+	}
+
+	return ChangelogResult{ShouldShow: false, Version: currentVersion, Error: ""}
+}
+
+func (a *App) MarkVersionAsSeen() error {
+	return a.SetLastSeenVersion(a.GetAppVersion())
+}
+
+func (a *App) GetLatestReleaseInfo() (*autoupdater.UpdateInfo, error) {
+	if a.IsDevMode() {
+		return &autoupdater.UpdateInfo{
+			Available:      false,
+			CurrentVersion: AppVersion,
+			LatestVersion:  AppVersion,
+			ReleaseNotes:   "Mode développement - Pas de vérification de mise à jour",
+		}, nil
+	}
+	return a.updater.CheckForUpdates()
+}
+
+func (a *App) IsFFmpegInstalled() bool {
+	return a.ffmpeg.IsInstalled()
+}
+
+func (a *App) DownloadFFmpeg() error {
+	return a.ffmpeg.Download(func(progress float64) {
+		if a.ctx != nil {
+			wailsruntime.EventsEmit(a.ctx, "ffmpeg-download-progress", map[string]interface{}{
+				"progress": progress,
+			})
+		}
+	})
+}
+
+func (a *App) ConvertVideoToMP4(webmPath, mp4Path string) error {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+
+	webmFullPath := filepath.Join(tempDir, webmPath)
+	mp4FullPath := filepath.Join(tempDir, mp4Path)
+
+	// Vérifier que le fichier WebM existe
+	if _, err := os.Stat(webmFullPath); os.IsNotExist(err) {
+		return fmt.Errorf("fichier WebM introuvable: %s", webmFullPath)
+	}
+
+	err := a.ffmpeg.ConvertWebMToMP4(webmFullPath, mp4FullPath)
+	if err != nil {
+		return fmt.Errorf("erreur conversion ffmpeg: %w", err)
+	}
+
+	// Vérifier que le fichier MP4 a été créé
+	if _, err := os.Stat(mp4FullPath); os.IsNotExist(err) {
+		return fmt.Errorf("fichier MP4 non créé: %s", mp4FullPath)
+	}
+
+	return nil
+}
+
+func (a *App) SaveTempFile(filename string, data []int) error {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	os.MkdirAll(tempDir, 0755)
+
+	byteData := make([]byte, len(data))
+	for i, v := range data {
+		byteData[i] = byte(v)
+	}
+
+	filePath := filepath.Join(tempDir, filename)
+	return os.WriteFile(filePath, byteData, 0644)
+}
+
+func (a *App) ReadTempFile(filename string) ([]int, error) {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	filePath := filepath.Join(tempDir, filename)
+
+	data, err := os.ReadFile(filePath)
+	if err != nil {
+		return nil, fmt.Errorf("erreur lecture %s: %w", filePath, err)
+	}
+
+	if len(data) == 0 {
+		return nil, fmt.Errorf("fichier vide: %s", filePath)
+	}
+
+	// Convertir []byte en []int pour une meilleure compatibilité avec JavaScript
+	intData := make([]int, len(data))
+	for i, b := range data {
+		intData[i] = int(b)
+	}
+
+	return intData, nil
+}
+
+func (a *App) DeleteTempFile(filename string) error {
+	homeDir, _ := os.UserHomeDir()
+	tempDir := filepath.Join(homeDir, ".vibecraft", "temp")
+	filePath := filepath.Join(tempDir, filename)
+	return os.Remove(filePath)
 }

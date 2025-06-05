@@ -6,7 +6,6 @@ import GeneratorManager from './GeneratorManager';
 const Sidebar = ({ globalSettings, setGlobalSettings, availableGenerators, onGeneratorSelect, onGeneratorsChange }) => {
   return (
     <div className="space-y-4">
-      {/* Paramètres globaux */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center space-x-2 mb-3">
           <Settings className="w-4 h-4 text-blue-600" />
@@ -17,7 +16,6 @@ const Sidebar = ({ globalSettings, setGlobalSettings, availableGenerators, onGen
           onChange={setGlobalSettings} 
         />
       </div>
-      {/* Gestion des générateurs */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4">
         <div className="flex items-center space-x-2 mb-3">
           <Upload className="w-4 h-4 text-purple-600" />

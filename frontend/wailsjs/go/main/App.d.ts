@@ -5,15 +5,35 @@ import {main} from '../models';
 
 export function CheckForUpdates():Promise<autoupdater.UpdateInfo>;
 
+export function ConvertVideoToMP4(arg1:string,arg2:string):Promise<void>;
+
 export function DeleteGenerator(arg1:string):Promise<void>;
+
+export function DeleteTempFile(arg1:string):Promise<void>;
+
+export function DownloadFFmpeg():Promise<void>;
 
 export function DownloadUpdate(arg1:string):Promise<string>;
 
 export function GetAppVersion():Promise<string>;
 
+export function GetLastSeenVersion():Promise<string>;
+
+export function GetLatestReleaseInfo():Promise<autoupdater.UpdateInfo>;
+
 export function GetPlatformInfo():Promise<Record<string, string>>;
 
 export function InstallUpdate(arg1:string):Promise<void>;
+
+export function InstallUpdateWithRestart(arg1:string):Promise<void>;
+
+export function IsDevMode():Promise<boolean>;
+
+export function IsFFmpegInstalled():Promise<boolean>;
+
+export function IsFirstRunAfterUpdate():Promise<boolean>;
+
+export function IsFirstTimeUser():Promise<boolean>;
 
 export function ListGenerators():Promise<Array<main.GeneratorInfo>>;
 
@@ -21,6 +41,26 @@ export function LoadGenerator(arg1:string):Promise<string>;
 
 export function LoadGeneratorConfig(arg1:string):Promise<string>;
 
+export function MarkVersionAsSeen():Promise<void>;
+
+export function ReadTempFile(arg1:string):Promise<Array<number>>;
+
+export function ReadTempFileAsBase64(arg1:string):Promise<string>;
+
 export function SaveGenerator(arg1:string,arg2:string):Promise<void>;
 
 export function SaveGeneratorConfig(arg1:string,arg2:string):Promise<void>;
+
+export function SaveTempFile(arg1:string,arg2:Array<number>):Promise<void>;
+
+export function SetLastSeenVersion(arg1:string):Promise<void>;
+
+export function ShouldShowChangelog():Promise<main.ChangelogResult>;
+
+export function TestFFmpeg():Promise<string>;
+
+export function TestFunction():Promise<string>;
+
+export function TestRestart():Promise<void>;
+
+export function TestShouldShowChangelog():Promise<boolean>;

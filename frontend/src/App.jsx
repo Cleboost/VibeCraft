@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Video } from 'lucide-react';
+import { Video, Sparkles } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import PreviewPanel from './components/PreviewPanel';
 import GeneratorConfigPanel from './components/GeneratorConfigPanel';
 import UpdateDialog from './components/UpdateDialog';
-import { ListGenerators, SaveGeneratorConfig, LoadGeneratorConfig, CheckForUpdates } from '../wailsjs/go/main/App';
+import ChangelogDialog from './components/ChangelogDialog';
+import { ListGenerators, SaveGeneratorConfig, LoadGeneratorConfig, CheckForUpdates, ShouldShowChangelog, MarkVersionAsSeen, GetLatestReleaseInfo, GetAppVersion, IsFirstTimeUser } from '../wailsjs/go/main/App';
 import { BouncingBallGenerator } from './generators/bouncingBall';
 import { loadGenerator } from './utils/generatorLoader';
 import { flattenConfig } from './utils/configUtils';
@@ -22,21 +23,87 @@ function App() {
   const [isRecording, setIsRecording] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [showChangelogDialog, setShowChangelogDialog] = useState(false);
+  const [changelogInfo, setChangelogInfo] = useState(null);
+  const [isManualChangelog, setIsManualChangelog] = useState(false);
 
   useEffect(() => {
-    const defaultGenerator = new BouncingBallGenerator();
-    const defaultParams = {};
-    flattenConfig(defaultGenerator.getConfig()).forEach(param => {
-      defaultParams[param.name] = param.default;
-    });
-    setGeneratorParams({ ...defaultParams });
-    setSelectedGenerator(defaultGenerator);
-    setCanvasKey(prev => prev + 1); // Force le setup au premier affichage
-    loadAvailableGenerators();
+    const initializeApp = async () => {
+      const defaultGenerator = new BouncingBallGenerator();
+      const defaultParams = {};
+      flattenConfig(defaultGenerator.getConfig()).forEach(param => {
+        defaultParams[param.name] = param.default;
+      });
+      setGeneratorParams({ ...defaultParams });
+      setSelectedGenerator(defaultGenerator);
+      setCanvasKey(prev => prev + 1);
+      
+      await loadAvailableGenerators();
+      
+      await checkShouldShowChangelog();
     
-    // Vérifier les mises à jour au démarrage
-    checkForUpdatesOnStartup();
+      await checkForUpdatesOnStartup();
+    };
+
+    initializeApp();
   }, []);
+
+  const checkShouldShowChangelog = async () => {
+    try {
+      const result = await ShouldShowChangelog();
+      
+      const shouldShow = result?.shouldShow || false;
+      const version = result?.version || "vx.x.x";
+      const error = result?.error || null;
+      
+      if (error && error.trim() !== '') {
+        console.error('Erreur retournée par ShouldShowChangelog:', error);
+        return;
+      }
+      
+      if (shouldShow) {
+        const currentVersion = await GetAppVersion();
+        const isFirstTimeUser = await IsFirstTimeUser();
+        
+        let releaseNotes = null;
+        if (!isFirstTimeUser) {
+          try {
+            const releaseInfo = await GetLatestReleaseInfo();
+            releaseNotes = releaseInfo?.releaseNotes || null;
+          } catch (error) {
+            // Erreur silencieuse pour les notes de version
+          }
+        }
+        
+        setChangelogInfo({
+          version: version,
+          releaseNotes: releaseNotes,
+          isFirstTime: isFirstTimeUser
+        });
+        setIsManualChangelog(false);
+        setShowChangelogDialog(true);
+      }
+    } catch (error) {
+      console.error('Erreur lors de la vérification du changelog:', error);
+    }
+  };
+
+  const handleShowChangelogManually = async () => {
+    try {
+      const currentVersion = await GetAppVersion();
+      const releaseInfo = await GetLatestReleaseInfo();
+      
+      setChangelogInfo({
+        version: currentVersion,
+        releaseNotes: releaseInfo?.releaseNotes || null,
+        isFirstTime: false
+      });
+      setIsManualChangelog(true);
+      setShowChangelogDialog(true);
+    } catch (error) {
+      console.error('Erreur lors de l\'ouverture manuelle du changelog:', error);
+    }
+  };
 
   const checkForUpdatesOnStartup = async () => {
     try {
@@ -45,15 +112,24 @@ function App() {
         setShowUpdateDialog(true);
       }
     } catch (error) {
-      console.log('Vérification des mises à jour échouée:', error);
-      // Ne pas afficher d'erreur à l'utilisateur pour ne pas le déranger au démarrage
+      // Erreur silencieuse pour la vérification des mises à jour
+    }
+  };
+
+  const handleCloseChangelog = async () => {
+    setShowChangelogDialog(false);
+    if (!isManualChangelog) {
+      try {
+        await MarkVersionAsSeen();
+      } catch (error) {
+        // Erreur silencieuse pour la sauvegarde de version
+      }
     }
   };
 
   const loadAvailableGenerators = async () => {
     try {
       const generators = await ListGenerators();
-      // Pour chaque générateur, charge dynamiquement et récupère le nom du manifeste
       const enrichedGenerators = await Promise.all(
         (generators || []).map(async (g) => {
           try {
@@ -61,7 +137,6 @@ function App() {
             const manifestName = instance.constructor.manifest?.name || g.name || g.filename;
             return { ...g, name: manifestName };
           } catch {
-            // fallback si erreur de chargement
             return g;
           }
         })
@@ -84,20 +159,18 @@ function App() {
       }
       packageId = manifest.package_id;
 
-      // Charger la config sauvegardée
       let savedConfig = {};
       try {
         const raw = await LoadGeneratorConfig(packageId);
         if (raw) savedConfig = JSON.parse(raw);
       } catch (e) { /* ignore */ }
 
-      // Générer la config par défaut
+      
       const defaultParams = {};
       flattenConfig(manifest.config).forEach(param => {
         defaultParams[param.name] = param.default;
       });
 
-      // Fusionner la config sauvegardée avec les valeurs par défaut
       setGeneratorParams({ ...defaultParams, ...savedConfig });
       setSelectedGenerator(generator);
     } catch (error) {
@@ -127,12 +200,11 @@ function App() {
       defaults[param.name] = param.default;
     });
     setGeneratorParams({ ...defaults });
-    setCanvasKey(prev => prev + 1); // Force le reset du canvas
+    setCanvasKey(prev => prev + 1);
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100">
-      {/* En-tête moderne sans emoji */}
       <header className="bg-white/80 backdrop-blur-sm shadow-sm border-b border-gray-200">
         <div className="max-w-5xl mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
@@ -148,19 +220,27 @@ function App() {
             <div className="flex items-center space-x-2 text-xs text-gray-600">
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">Prêt</span>
               <span>Wails + React</span>
-              <button 
-                onClick={() => setShowUpdateDialog(true)}
-                className="text-blue-600 hover:text-blue-800 underline"
-              >
-                Vérifier les mises à jour
-              </button>
+              <div className="flex items-center space-x-1">
+                <button 
+                  onClick={() => setShowUpdateDialog(true)}
+                  className="bg-blue-100 text-blue-700 hover:bg-blue-200 px-3 py-1 rounded-full text-xs font-medium transition-colors"
+                >
+                  Mises à jour
+                </button>
+                <button 
+                  onClick={handleShowChangelogManually}
+                  className="bg-purple-100 text-purple-700 hover:bg-purple-200 px-3 py-1 rounded-full text-xs font-medium transition-colors inline-flex items-center space-x-1"
+                >
+                  <Sparkles className="w-3 h-3" />
+                  <span>Nouveautés</span>
+                </button>
+              </div>
             </div>
           </div>
         </div>
       </header>
       <div className="w-full px-4 py-4">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sidebar : paramètres globaux + générateurs */}
           <Sidebar
             globalSettings={globalSettings}
             setGlobalSettings={setGlobalSettings}
@@ -168,7 +248,6 @@ function App() {
             onGeneratorSelect={handleGeneratorSelect}
             onGeneratorsChange={loadAvailableGenerators}
           />
-          {/* Centre : prévisualisation */}
           <PreviewPanel
             generator={selectedGenerator}
             params={generatorParams}
@@ -177,7 +256,6 @@ function App() {
             setIsRecording={setIsRecording}
             canvasKey={canvasKey}
           />
-          {/* Droite : configuration du générateur */}
           <GeneratorConfigPanel
             selectedGenerator={selectedGenerator}
             generatorParams={generatorParams}
@@ -187,10 +265,18 @@ function App() {
         </div>
       </div>
       
-      {/* Dialogue de mise à jour */}
       <UpdateDialog 
         isVisible={showUpdateDialog} 
         onClose={() => setShowUpdateDialog(false)} 
+      />
+      
+      <ChangelogDialog
+        isVisible={showChangelogDialog}
+        onClose={handleCloseChangelog}
+        version={changelogInfo?.version}
+        releaseNotes={changelogInfo?.releaseNotes}
+        isFirstTime={changelogInfo?.isFirstTime || false}
+        showContinueButton={!isManualChangelog}
       />
     </div>
   );

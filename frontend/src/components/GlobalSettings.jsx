@@ -1,7 +1,48 @@
-import React from 'react';
-import { Clock, Monitor, FileVideo, Maximize2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Clock, Monitor, FileVideo, Maximize2, Download, CheckCircle } from 'lucide-react';
+import { IsFFmpegInstalled, DownloadFFmpeg } from '../../wailsjs/go/main/App';
 
 const GlobalSettings = ({ settings, onChange }) => {
+  const [ffmpegInstalled, setFFmpegInstalled] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+
+  useEffect(() => {
+    checkFFmpegInstallation();
+    
+    const handleFFmpegProgress = (data) => {
+      setDownloadProgress(data.progress * 100);
+    };
+
+    window.runtime.EventsOn('ffmpeg-download-progress', handleFFmpegProgress);
+    
+    return () => {
+      window.runtime.EventsOff('ffmpeg-download-progress');
+    };
+  }, []);
+
+  const checkFFmpegInstallation = async () => {
+    try {
+      const installed = await IsFFmpegInstalled();
+      setFFmpegInstalled(installed);
+    } catch (error) {
+      // Erreur silencieuse
+    }
+  };
+
+  const downloadFFmpeg = async () => {
+    setIsDownloading(true);
+    setDownloadProgress(0);
+    try {
+      await DownloadFFmpeg();
+      setFFmpegInstalled(true);
+      setIsDownloading(false);
+    } catch (error) {
+      alert('Erreur lors du téléchargement de FFmpeg: ' + error.message);
+      setIsDownloading(false);
+    }
+  };
+
   const handleDurationChange = (e) => {
     onChange({
       ...settings,
@@ -32,7 +73,6 @@ const GlobalSettings = ({ settings, onChange }) => {
 
   return (
     <div className="space-y-4">
-      {/* Durée */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Clock className="w-3 h-3 text-gray-600" />
@@ -54,7 +94,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Framerate */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Monitor className="w-3 h-3 text-gray-600" />
@@ -65,11 +104,10 @@ const GlobalSettings = ({ settings, onChange }) => {
             <button
               key={fps}
               onClick={() => handleFramerateChange(fps)}
-              className={`px-2 py-1 text-xs rounded-md transition-all ${
-                settings.framerate === fps
+              className={`px-2 py-1 text-xs rounded-md transition-all ${settings.framerate === fps
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {fps} FPS
             </button>
@@ -77,7 +115,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Résolution */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Maximize2 className="w-3 h-3 text-gray-600" />
@@ -93,11 +130,10 @@ const GlobalSettings = ({ settings, onChange }) => {
             <button
               key={res.value}
               onClick={() => handleResolutionChange(res.value)}
-              className={`px-2 py-1 text-xs rounded-md transition-all ${
-                settings.resolution === res.value
+              className={`px-2 py-1 text-xs rounded-md transition-all ${settings.resolution === res.value
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {res.label}
             </button>
@@ -105,34 +141,71 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Format */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <FileVideo className="w-3 h-3 text-gray-600" />
           <label className="text-xs font-medium text-gray-700">Format</label>
+          {ffmpegInstalled && (
+            <CheckCircle className="w-3 h-3 text-green-500" />
+          )}
         </div>
         <div className="grid grid-cols-2 gap-1">
           <button
             onClick={() => handleFormatChange('webm')}
-            className={`px-2 py-1 text-xs rounded-md transition-all ${
-              settings.format === 'webm'
+            className={`px-2 py-1 text-xs rounded-md transition-all ${settings.format === 'webm'
                 ? 'bg-green-500 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+              }`}
           >
             WebM
           </button>
           <button
             onClick={() => handleFormatChange('mp4')}
-            disabled
-            className="px-2 py-1 text-xs rounded-md bg-gray-100 text-gray-400 cursor-not-allowed"
+            disabled={!ffmpegInstalled}
+            className={`px-2 py-1 text-xs rounded-md transition-all ${
+              !ffmpegInstalled
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : settings.format === 'mp4'
+                ? 'bg-green-500 text-white shadow-sm'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
           >
-            MP4 (bientôt)
+            MP4
           </button>
         </div>
+        
+        {!ffmpegInstalled && !isDownloading && (
+          <div className="mt-2 p-2 bg-amber-50 rounded-lg border border-amber-200">
+            <p className="text-xs text-amber-800 mb-2">
+              FFmpeg requis pour MP4
+            </p>
+            <button
+              onClick={downloadFFmpeg}
+              className="flex items-center space-x-1 px-2 py-1 bg-amber-500 text-white text-xs rounded-md hover:bg-amber-600 transition-all"
+            >
+              <Download className="w-3 h-3" />
+              <span>Télécharger FFmpeg</span>
+            </button>
+          </div>
+        )}
+        
+
+        
+        {isDownloading && (
+          <div className="mt-2 p-2 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-xs text-blue-800 mb-2">
+              Téléchargement FFmpeg... {downloadProgress.toFixed(1)}%
+            </p>
+            <div className="w-full bg-blue-200 rounded-full h-2">
+              <div 
+                className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                style={{ width: `${downloadProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Aperçu configuration */}
       <div className="bg-blue-50 rounded-lg p-2 mt-3">
         <p className="text-xs text-blue-800">
           Vidéo de <strong>{settings.duration}s</strong> à <strong>{settings.framerate} FPS</strong> en <strong>{settings.resolution}</strong> format <strong>{settings.format.toUpperCase()}</strong>
