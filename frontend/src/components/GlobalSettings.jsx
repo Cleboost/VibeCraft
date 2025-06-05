@@ -32,7 +32,6 @@ const GlobalSettings = ({ settings, onChange }) => {
 
   return (
     <div className="space-y-4">
-      {/* Durée */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Clock className="w-3 h-3 text-gray-600" />
@@ -54,7 +53,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Framerate */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Monitor className="w-3 h-3 text-gray-600" />
@@ -65,11 +63,10 @@ const GlobalSettings = ({ settings, onChange }) => {
             <button
               key={fps}
               onClick={() => handleFramerateChange(fps)}
-              className={`px-2 py-1 text-xs rounded-md transition-all ${
-                settings.framerate === fps
+              className={`px-2 py-1 text-xs rounded-md transition-all ${settings.framerate === fps
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {fps} FPS
             </button>
@@ -77,7 +74,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Résolution */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <Maximize2 className="w-3 h-3 text-gray-600" />
@@ -93,11 +89,10 @@ const GlobalSettings = ({ settings, onChange }) => {
             <button
               key={res.value}
               onClick={() => handleResolutionChange(res.value)}
-              className={`px-2 py-1 text-xs rounded-md transition-all ${
-                settings.resolution === res.value
+              className={`px-2 py-1 text-xs rounded-md transition-all ${settings.resolution === res.value
                   ? 'bg-blue-500 text-white shadow-sm'
                   : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-              }`}
+                }`}
             >
               {res.label}
             </button>
@@ -105,7 +100,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Format */}
       <div>
         <div className="flex items-center space-x-2 mb-2">
           <FileVideo className="w-3 h-3 text-gray-600" />
@@ -114,11 +108,10 @@ const GlobalSettings = ({ settings, onChange }) => {
         <div className="grid grid-cols-2 gap-1">
           <button
             onClick={() => handleFormatChange('webm')}
-            className={`px-2 py-1 text-xs rounded-md transition-all ${
-              settings.format === 'webm'
+            className={`px-2 py-1 text-xs rounded-md transition-all ${settings.format === 'webm'
                 ? 'bg-green-500 text-white shadow-sm'
                 : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
+              }`}
           >
             WebM
           </button>
@@ -132,7 +125,6 @@ const GlobalSettings = ({ settings, onChange }) => {
         </div>
       </div>
 
-      {/* Aperçu configuration */}
       <div className="bg-blue-50 rounded-lg p-2 mt-3">
         <p className="text-xs text-blue-800">
           Vidéo de <strong>{settings.duration}s</strong> à <strong>{settings.framerate} FPS</strong> en <strong>{settings.resolution}</strong> format <strong>{settings.format.toUpperCase()}</strong>

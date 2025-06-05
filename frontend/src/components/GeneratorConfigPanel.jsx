@@ -4,7 +4,6 @@ import DynamicForm from './DynamicForm';
 import { flattenConfig } from '../utils/configUtils';
 
 const GeneratorConfigPanel = ({ selectedGenerator, generatorParams, onParameterChange, onReset }) => {
-  // Fonction pour remettre la config par défaut
   const handleReset = () => {
     if (!selectedGenerator) return;
     const defaults = {};

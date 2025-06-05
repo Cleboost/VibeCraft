@@ -9,7 +9,6 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
   const [isPreviewing, setIsPreviewing] = useState(false);
   const [recordedVideo, setRecordedVideo] = useState(null);
 
-  // Calculer la résolution courante
   const [canvasWidth, canvasHeight] = globalSettings.resolution.split('x').map(Number);
 
   useEffect(() => {
@@ -24,12 +23,10 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
   const startPreview = () => {
     if (!generator || !canvasRef.current) return;
 
-    // Nettoyer l'animation précédente
     stopAnimation();
     if (typeof generator.cleanup === 'function') {
       generator.cleanup();
     }
-    // Vider le canvas
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -86,7 +83,6 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
     onRecordingChange?.(true);
     mediaRecorderRef.current.start();
 
-    // Arrêter l'enregistrement après la durée spécifiée
     setTimeout(() => {
       if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
         mediaRecorderRef.current.stop();
@@ -117,7 +113,6 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
 
   return (
     <div className="space-y-4">
-      {/* Canvas */}
       <div className="bg-black rounded-lg overflow-hidden border-2 border-gray-200 aspect-video">
         <canvas
           ref={canvasRef}
@@ -128,7 +123,6 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
         />
       </div>
 
-      {/* Contrôles */}
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-2">
           <button
@@ -173,7 +167,6 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
         )}
       </div>
 
-      {/* État */}
       {isRecording && (
         <div className="bg-red-50 border border-red-200 rounded-lg p-3">
           <div className="flex items-center space-x-2">

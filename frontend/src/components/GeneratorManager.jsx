@@ -27,16 +27,15 @@ const GeneratorManager = ({ availableGenerators, onGeneratorSelect, onGenerators
 
     setIsUploading(true);
     setUploadStatus('');
-    
+
     try {
       const content = await selectedFile.text();
       await SaveGenerator(selectedFile.name, content);
-      
+
       setUploadStatus('Générateur importé avec succès !');
       setSelectedFile(null);
       onGeneratorsChange();
-      
-      // Reset file input
+
       const fileInput = document.getElementById('generator-file');
       if (fileInput) fileInput.value = '';
     } catch (error) {
@@ -103,9 +102,8 @@ const GeneratorManager = ({ availableGenerators, onGeneratorSelect, onGenerators
     <div className="space-y-4">
       {/* Import de fichier */}
       <div
-        className={`border-2 border-dashed rounded-lg p-3 transition-colors ${
-          isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
-        }`}
+        className={`border-2 border-dashed rounded-lg p-3 transition-colors ${isDragActive ? 'border-blue-400 bg-blue-50' : 'border-gray-300'
+          }`}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -155,21 +153,18 @@ const GeneratorManager = ({ availableGenerators, onGeneratorSelect, onGenerators
         )}
 
         {uploadStatus && (
-          <div className={`mt-2 p-2 rounded-md text-xs ${
-            uploadStatus.includes('succès') 
-              ? 'bg-green-50 text-green-800' 
+          <div className={`mt-2 p-2 rounded-md text-xs ${uploadStatus.includes('succès')
+              ? 'bg-green-50 text-green-800'
               : 'bg-red-50 text-red-800'
-          }`}>
+            }`}>
             {uploadStatus}
           </div>
         )}
       </div>
 
-      {/* Liste des générateurs */}
       <div>
         <div className="text-xs font-medium text-gray-700 mb-2">Générateurs disponibles</div>
         <div className="space-y-1">
-          {/* Générateur par défaut */}
           <button
             onClick={() => handleGeneratorClick('default')}
             className="w-full flex items-center justify-between p-2 bg-gray-50 hover:bg-gray-100 rounded-md transition-colors"
@@ -180,12 +175,9 @@ const GeneratorManager = ({ availableGenerators, onGeneratorSelect, onGenerators
             </div>
           </button>
 
-          {/* Générateurs importés */}
           {availableGenerators && availableGenerators.map((generator, index) => {
-            // Gérer le cas où generator peut être un objet ou une chaîne
             let generatorName = typeof generator === 'string' ? generator : generator.name;
             const generatorFilename = typeof generator === 'string' ? generator : generator.filename;
-            // Si le manifeste est présent, utiliser son nom
             if (generator.manifest && generator.manifest.name) {
               generatorName = generator.manifest.name;
             }

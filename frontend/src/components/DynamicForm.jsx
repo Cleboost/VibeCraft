@@ -8,10 +8,8 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
   const previousValues = useRef({});
   const timeoutRef = useRef(null);
 
-  // Utiliser les valeurs du parent si fournies (pour les sous-formulaires)
   const effectiveValues = parentFormValues || values || {};
 
-  // Fonction pour obtenir les valeurs par défaut
   const getDefaultValues = () => {
     const defaults = {};
     config.forEach(param => {
@@ -26,7 +24,6 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
     return defaults;
   };
 
-  // Effet pour initialiser les valeurs
   useEffect(() => {
     const defaultValues = getDefaultValues();
     const initialValues = { ...defaultValues, ...effectiveValues };
@@ -34,7 +31,6 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
     previousValues.current = initialValues;
   }, [config]);
 
-  // Effet pour gérer les changements de valeurs externes
   useEffect(() => {
     if (isInitialMount.current) {
       isInitialMount.current = false;
@@ -91,11 +87,10 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
   const renderField = (param) => {
     const value = formValues[param.name];
 
-    // Vérifier si le champ dépend d'un autre paramètre
     if (param.depend_on) {
       const dependentValue = formValues[param.depend_on];
       if (!dependentValue) {
-        return null; // Ne pas afficher le champ si la dépendance n'est pas satisfaite
+        return null;
       }
     }
 
@@ -246,9 +241,7 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
     }
   };
 
-  // Accordéons ouverts/fermés pour les catégories
   const [openCategories, setOpenCategories] = useState(() => {
-    // Initialiser selon collapse
     const initial = {};
     if (Array.isArray(config)) {
       config.forEach(param => {
@@ -263,10 +256,8 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
     setOpenCategories(prev => ({ ...prev, [catName]: !prev[catName] }));
   };
 
-  // Rendu récursif des champs (catégories incluses)
   const renderFields = (params) => {
     return params.map((param, idx) => {
-      // Catégorie
       if (param.type === 'categorie' && Array.isArray(param.content)) {
         const isOpen = openCategories[param.name] !== false;
         return (
@@ -289,8 +280,6 @@ const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
           </div>
         );
       }
-      // Champ normal
-      // Vérifier depend_on
       if (param.depend_on) {
         const dependentValue = formValues[param.depend_on];
         if (!dependentValue) return null;
