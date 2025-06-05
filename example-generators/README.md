@@ -48,8 +48,28 @@ Utilisez ces exemples comme base pour créer vos propres générateurs. Chaque g
 ### Types de paramètres supportés :
 - `number` : Champ numérique avec min/max
 - `color` : Sélecteur de couleur
-- `boolean` : Checkbox
-- `file` : Sélecteur de fichier (images)
+- `boolean` : Case à cocher
+
+### Propriétés spéciales :
+- `depend_on` : Nom du paramètre booléen dont dépend ce champ. Le champ ne sera affiché que si le paramètre dépendant est `true`.
+  Exemple :
+  ```javascript
+  {
+    name: 'showAdvanced',
+    type: 'boolean',
+    default: false,
+    label: 'Options avancées'
+  },
+  {
+    name: 'advancedOption',
+    type: 'number',
+    default: 5,
+    min: 0,
+    max: 10,
+    label: 'Option avancée',
+    depend_on: 'showAdvanced' // Ne s'affiche que si showAdvanced est true
+  }
+  ```
 
 ## 📖 Documentation complète
 

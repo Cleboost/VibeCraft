@@ -1,18 +1,27 @@
 import React from 'react';
-import { Hash, Palette, ToggleLeft, File as FileIcon } from 'lucide-react';
+import { Hash, Palette, ToggleLeft, File as FileIcon, ChevronDown } from 'lucide-react';
 import { useState, useEffect, useRef } from 'react';
 
-const DynamicForm = ({ config, values, onChange }) => {
+const DynamicForm = ({ config, values, onChange, parentFormValues }) => {
   const [formValues, setFormValues] = useState({});
   const isInitialMount = useRef(true);
   const previousValues = useRef({});
   const timeoutRef = useRef(null);
 
+  // Utiliser les valeurs du parent si fournies (pour les sous-formulaires)
+  const effectiveValues = parentFormValues || values || {};
+
   // Fonction pour obtenir les valeurs par défaut
   const getDefaultValues = () => {
     const defaults = {};
     config.forEach(param => {
-      defaults[param.name] = param.default;
+      if (param.type === 'categorie' && Array.isArray(param.content)) {
+        param.content.forEach(child => {
+          defaults[child.name] = child.default;
+        });
+      } else {
+        defaults[param.name] = param.default;
+      }
     });
     return defaults;
   };
@@ -20,7 +29,7 @@ const DynamicForm = ({ config, values, onChange }) => {
   // Effet pour initialiser les valeurs
   useEffect(() => {
     const defaultValues = getDefaultValues();
-    const initialValues = { ...defaultValues, ...values };
+    const initialValues = { ...defaultValues, ...effectiveValues };
     setFormValues(initialValues);
     previousValues.current = initialValues;
   }, [config]);
@@ -31,49 +40,33 @@ const DynamicForm = ({ config, values, onChange }) => {
       isInitialMount.current = false;
       return;
     }
-
     const defaultValues = getDefaultValues();
-    const newValues = { ...defaultValues, ...values };
-    
-    // Vérifier si les valeurs ont réellement changé
-    const hasChanged = Object.keys(newValues).some(key => 
-      newValues[key] !== previousValues.current[key]
-    );
-
+    const newValues = { ...defaultValues, ...effectiveValues };
+    const hasChanged = Object.keys(newValues).some(key => newValues[key] !== previousValues.current[key]);
     if (hasChanged) {
-      console.log('Mise à jour depuis les props:', newValues);
       setFormValues(newValues);
       previousValues.current = newValues;
     }
-  }, [values, config]);
+  }, [effectiveValues, config]);
 
   const handleChange = (paramName, value) => {
-    // Annuler le timeout précédent s'il existe
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
-
-    // Mettre à jour les valeurs locales immédiatement
     setFormValues(prev => {
-      const newValues = {
-        ...prev,
-        [paramName]: value
-      };
+      const newValues = { ...prev, [paramName]: value };
       return newValues;
     });
-
-    // Débouncer l'appel à onChange
     timeoutRef.current = setTimeout(() => {
       const defaultValues = getDefaultValues();
       const currentValues = { ...defaultValues, ...formValues, [paramName]: value };
-      console.log('Notification de changement:', currentValues);
       previousValues.current = currentValues;
       onChange(currentValues);
-    }, 100); // Attendre 100ms avant de notifier le changement
+    }, 100);
   };
 
   const handleFileChange = (paramName, file) => {
-    if (file && file.size > 5 * 1024 * 1024) { // 5MB limit
+    if (file && file.size > 5 * 1024 * 1024) {
       alert('Le fichier ne doit pas dépasser 5 Mo');
       return;
     }
@@ -97,6 +90,14 @@ const DynamicForm = ({ config, values, onChange }) => {
 
   const renderField = (param) => {
     const value = formValues[param.name];
+
+    // Vérifier si le champ dépend d'un autre paramètre
+    if (param.depend_on) {
+      const dependentValue = formValues[param.depend_on];
+      if (!dependentValue) {
+        return null; // Ne pas afficher le champ si la dépendance n'est pas satisfaite
+      }
+    }
 
     switch (param.type) {
       case 'number':
@@ -245,6 +246,74 @@ const DynamicForm = ({ config, values, onChange }) => {
     }
   };
 
+  // Accordéons ouverts/fermés pour les catégories
+  const [openCategories, setOpenCategories] = useState(() => {
+    // Initialiser selon collapse
+    const initial = {};
+    if (Array.isArray(config)) {
+      config.forEach(param => {
+        if (param.type === 'categorie') {
+          initial[param.name] = param.collapse === true ? false : true;
+        }
+      });
+    }
+    return initial;
+  });
+  const toggleCategory = (catName) => {
+    setOpenCategories(prev => ({ ...prev, [catName]: !prev[catName] }));
+  };
+
+  // Rendu récursif des champs (catégories incluses)
+  const renderFields = (params) => {
+    return params.map((param, idx) => {
+      // Catégorie
+      if (param.type === 'categorie' && Array.isArray(param.content)) {
+        const isOpen = openCategories[param.name] !== false;
+        return (
+          <div key={param.name} className="border rounded-lg mb-2">
+            <button
+              type="button"
+              className="w-full flex items-center justify-between px-4 py-2 bg-gray-50 hover:bg-gray-100 rounded-t-lg focus:outline-none"
+              onClick={() => toggleCategory(param.name)}
+            >
+              <span className="font-semibold text-gray-800">{param.name}</span>
+              <ChevronDown
+                className={`w-5 h-5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}
+              />
+            </button>
+            {isOpen && (
+              <div className="p-4 space-y-6">
+                {renderFields(param.content)}
+              </div>
+            )}
+          </div>
+        );
+      }
+      // Champ normal
+      // Vérifier depend_on
+      if (param.depend_on) {
+        const dependentValue = formValues[param.depend_on];
+        if (!dependentValue) return null;
+      }
+      return (
+        <div key={param.name} className="form-group">
+          <label className="form-label flex items-center space-x-2">
+            <span>{getFieldIcon(param.type)}</span>
+            <span>{param.label || param.name}</span>
+            {param.type === 'number' && (
+              <span className="badge badge-primary">
+                {formValues[param.name] || param.default}
+              </span>
+            )}
+          </label>
+          <div className="mt-2">
+            {renderField(param)}
+          </div>
+        </div>
+      );
+    });
+  };
+
   if (!config || config.length === 0) {
     return (
       <div className="text-center py-8">
@@ -259,25 +328,7 @@ const DynamicForm = ({ config, values, onChange }) => {
 
   return (
     <div className="space-y-6">
-      {config.map((param, index) => (
-        <div key={param.name} className="form-group">
-          <label className="form-label flex items-center space-x-2">
-            <span>{getFieldIcon(param.type)}</span>
-            <span>{param.label}</span>
-            {param.type === 'number' && (
-              <span className="badge badge-primary">
-                {formValues[param.name] || param.default}
-              </span>
-            )}
-          </label>
-          <div className="mt-2">
-            {renderField(param)}
-          </div>
-          {index < config.length - 1 && (
-            <hr className="mt-6 border-gray-100" />
-          )}
-        </div>
-      ))}
+      {renderFields(config)}
     </div>
   );
 };
