@@ -27,7 +27,7 @@ type GeneratorInfo struct {
 // NewApp creates a new App application struct
 func NewApp() *App {
 	// Version actuelle de l'application - à modifier lors des releases
-	currentVersion := "v1.0.6"
+	currentVersion := "v1.0.7"
 	// Repository GitHub - à modifier avec votre repository
 	githubRepo := "cleboost/VibeCraft"
 
@@ -195,5 +195,5 @@ func (a *App) InstallUpdate(updateFile string) error {
 
 // GetAppVersion retourne la version actuelle de l'application
 func (a *App) GetAppVersion() string {
-	return "v1.0.6" // À synchroniser avec NewApp
+	return "v1.0.7" // À synchroniser avec NewApp
 }
