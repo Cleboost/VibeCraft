@@ -9,5 +9,8 @@
   "author": {
     "name": "Cleboost",
     "email": "clement.balarot@gmail.com"
+  },
+  "info": {
+    "productVersion": "1.0.1"
   }
 }
