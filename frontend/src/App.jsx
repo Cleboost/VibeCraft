@@ -3,7 +3,8 @@ import { Video } from 'lucide-react';
 import Sidebar from './components/Sidebar';
 import PreviewPanel from './components/PreviewPanel';
 import GeneratorConfigPanel from './components/GeneratorConfigPanel';
-import { ListGenerators, SaveGeneratorConfig, LoadGeneratorConfig } from '../wailsjs/go/main/App';
+import UpdateDialog from './components/UpdateDialog';
+import { ListGenerators, SaveGeneratorConfig, LoadGeneratorConfig, CheckForUpdates } from '../wailsjs/go/main/App';
 import { BouncingBallGenerator } from './generators/bouncingBall';
 import { loadGenerator } from './utils/generatorLoader';
 import { flattenConfig } from './utils/configUtils';
@@ -20,6 +21,7 @@ function App() {
   const [availableGenerators, setAvailableGenerators] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
   const [canvasKey, setCanvasKey] = useState(0);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
 
   useEffect(() => {
     const defaultGenerator = new BouncingBallGenerator();
@@ -31,7 +33,22 @@ function App() {
     setSelectedGenerator(defaultGenerator);
     setCanvasKey(prev => prev + 1); // Force le setup au premier affichage
     loadAvailableGenerators();
+    
+    // Vérifier les mises à jour au démarrage
+    checkForUpdatesOnStartup();
   }, []);
+
+  const checkForUpdatesOnStartup = async () => {
+    try {
+      const updateInfo = await CheckForUpdates();
+      if (updateInfo && updateInfo.available) {
+        setShowUpdateDialog(true);
+      }
+    } catch (error) {
+      console.log('Vérification des mises à jour échouée:', error);
+      // Ne pas afficher d'erreur à l'utilisateur pour ne pas le déranger au démarrage
+    }
+  };
 
   const loadAvailableGenerators = async () => {
     try {
@@ -131,6 +148,12 @@ function App() {
             <div className="flex items-center space-x-2 text-xs text-gray-600">
               <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full">Prêt</span>
               <span>Wails + React</span>
+              <button 
+                onClick={() => setShowUpdateDialog(true)}
+                className="text-blue-600 hover:text-blue-800 underline"
+              >
+                Vérifier les mises à jour
+              </button>
             </div>
           </div>
         </div>
@@ -163,6 +186,12 @@ function App() {
           />
         </div>
       </div>
+      
+      {/* Dialogue de mise à jour */}
+      <UpdateDialog 
+        isVisible={showUpdateDialog} 
+        onClose={() => setShowUpdateDialog(false)} 
+      />
     </div>
   );
 }

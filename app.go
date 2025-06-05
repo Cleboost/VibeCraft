@@ -8,11 +8,14 @@ import (
 	"regexp"
 	"runtime"
 	"strings"
+
+	"VibeCraft/pkg/autoupdater"
 )
 
 // App struct
 type App struct {
-	ctx context.Context
+	ctx     context.Context
+	updater *autoupdater.Updater
 }
 
 // GeneratorInfo représente les informations d'un générateur
@@ -23,7 +26,14 @@ type GeneratorInfo struct {
 
 // NewApp creates a new App application struct
 func NewApp() *App {
-	return &App{}
+	// Version actuelle de l'application - à modifier lors des releases
+	currentVersion := "v1.0.0"
+	// Repository GitHub - à modifier avec votre repository
+	githubRepo := "cleboost/VibeCraft"
+
+	return &App{
+		updater: autoupdater.NewUpdater(currentVersion, githubRepo),
+	}
 }
 
 // startup is called when the app starts. The context is saved
@@ -160,4 +170,30 @@ func (a *App) LoadGeneratorConfig(packageId string) (string, error) {
 		return string(cfg), nil
 	}
 	return "", nil
+}
+
+// CheckForUpdates vérifie s'il y a des mises à jour disponibles
+func (a *App) CheckForUpdates() (*autoupdater.UpdateInfo, error) {
+	return a.updater.CheckForUpdates()
+}
+
+// DownloadUpdate télécharge une mise à jour
+func (a *App) DownloadUpdate(downloadURL string) (string, error) {
+	return a.updater.DownloadUpdate(downloadURL, func(progress autoupdater.UpdateProgress) {
+		// Emettre l'événement de progrès vers le frontend
+		if a.ctx != nil {
+			// Utiliser les événements Wails pour notifier le frontend
+			// runtime.EventsEmit(a.ctx, "download-progress", progress)
+		}
+	})
+}
+
+// InstallUpdate installe la mise à jour téléchargée
+func (a *App) InstallUpdate(updateFile string) error {
+	return a.updater.InstallUpdate(updateFile)
+}
+
+// GetAppVersion retourne la version actuelle de l'application
+func (a *App) GetAppVersion() string {
+	return "v1.0.0" // À synchroniser avec NewApp
 }
