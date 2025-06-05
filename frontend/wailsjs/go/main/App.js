@@ -38,6 +38,10 @@ export function InstallUpdateWithRestart(arg1) {
   return window['go']['main']['App']['InstallUpdateWithRestart'](arg1);
 }
 
+export function IsDevMode() {
+  return window['go']['main']['App']['IsDevMode']();
+}
+
 export function IsFirstRunAfterUpdate() {
   return window['go']['main']['App']['IsFirstRunAfterUpdate']();
 }

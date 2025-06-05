@@ -160,6 +160,13 @@ func (a *App) LoadGeneratorConfig(packageId string) (string, error) {
 }
 
 func (a *App) CheckForUpdates() (*autoupdater.UpdateInfo, error) {
+	if a.IsDevMode() {
+		return &autoupdater.UpdateInfo{
+			Available:      false,
+			CurrentVersion: AppVersion,
+			LatestVersion:  AppVersion,
+		}, nil
+	}
 	return a.updater.CheckForUpdates()
 }
 
@@ -250,6 +257,11 @@ func (a *App) IsFirstTimeUser() bool {
 func (a *App) ShouldShowChangelog() ChangelogResult {
 	fmt.Printf("[DEBUG] ShouldShowChangelog - Starting\n")
 
+	if a.IsDevMode() {
+		fmt.Printf("[DEBUG] ShouldShowChangelog - Dev mode detected, skipping changelog\n")
+		return ChangelogResult{ShouldShow: false, Version: a.GetAppVersion(), Error: ""}
+	}
+
 	currentVersion := a.GetAppVersion()
 	fmt.Printf("[DEBUG] ShouldShowChangelog - currentVersion: %s\n", currentVersion)
 
@@ -283,6 +295,14 @@ func (a *App) MarkVersionAsSeen() error {
 }
 
 func (a *App) GetLatestReleaseInfo() (*autoupdater.UpdateInfo, error) {
+	if a.IsDevMode() {
+		return &autoupdater.UpdateInfo{
+			Available:      false,
+			CurrentVersion: AppVersion,
+			LatestVersion:  AppVersion,
+			ReleaseNotes:   "Mode développement - Pas de vérification de mise à jour",
+		}, nil
+	}
 	return a.updater.CheckForUpdates()
 }
 

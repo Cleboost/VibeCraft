@@ -21,6 +21,8 @@ export function InstallUpdate(arg1:string):Promise<void>;
 
 export function InstallUpdateWithRestart(arg1:string):Promise<void>;
 
+export function IsDevMode():Promise<boolean>;
+
 export function IsFirstRunAfterUpdate():Promise<boolean>;
 
 export function IsFirstTimeUser():Promise<boolean>;
