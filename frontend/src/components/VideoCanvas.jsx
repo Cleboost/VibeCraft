@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Play, Square, Download, Eye } from 'lucide-react';
 
-const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange }) => {
+const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, canvasKey }) => {
   const canvasRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const animationRef = useRef(null);
@@ -121,7 +121,7 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange }) =
       <div className="bg-black rounded-lg overflow-hidden border-2 border-gray-200 aspect-video">
         <canvas
           ref={canvasRef}
-          key={globalSettings.resolution}
+          key={canvasKey}
           width={canvasWidth}
           height={canvasHeight}
           className="w-full h-full object-contain"

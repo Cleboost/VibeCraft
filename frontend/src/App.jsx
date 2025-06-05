@@ -6,6 +6,7 @@ import GeneratorConfigPanel from './components/GeneratorConfigPanel';
 import { ListGenerators, SaveGeneratorConfig, LoadGeneratorConfig } from '../wailsjs/go/main/App';
 import { BouncingBallGenerator } from './generators/bouncingBall';
 import { loadGenerator } from './utils/generatorLoader';
+import { flattenConfig } from './utils/configUtils';
 
 function App() {
   const [globalSettings, setGlobalSettings] = useState({
@@ -18,15 +19,17 @@ function App() {
   const [generatorParams, setGeneratorParams] = useState({});
   const [availableGenerators, setAvailableGenerators] = useState([]);
   const [isRecording, setIsRecording] = useState(false);
+  const [canvasKey, setCanvasKey] = useState(0);
 
   useEffect(() => {
     const defaultGenerator = new BouncingBallGenerator();
-    setSelectedGenerator(defaultGenerator);
     const defaultParams = {};
-    defaultGenerator.getConfig().forEach(param => {
+    flattenConfig(defaultGenerator.getConfig()).forEach(param => {
       defaultParams[param.name] = param.default;
     });
-    setGeneratorParams(defaultParams);
+    setGeneratorParams({ ...defaultParams });
+    setSelectedGenerator(defaultGenerator);
+    setCanvasKey(prev => prev + 1); // Force le setup au premier affichage
     loadAvailableGenerators();
   }, []);
 
@@ -72,10 +75,10 @@ function App() {
       } catch (e) { /* ignore */ }
 
       // Générer la config par défaut
-        const defaultParams = {};
-      manifest.config.forEach(param => {
-          defaultParams[param.name] = param.default;
-        });
+      const defaultParams = {};
+      flattenConfig(manifest.config).forEach(param => {
+        defaultParams[param.name] = param.default;
+      });
 
       // Fusionner la config sauvegardée avec les valeurs par défaut
       setGeneratorParams({ ...defaultParams, ...savedConfig });
@@ -85,7 +88,7 @@ function App() {
       const defaultGenerator = new BouncingBallGenerator();
       setSelectedGenerator(defaultGenerator);
       const defaultParams = {};
-      defaultGenerator.getConfig().forEach(param => {
+      flattenConfig(defaultGenerator.getConfig()).forEach(param => {
         defaultParams[param.name] = param.default;
       });
       setGeneratorParams(defaultParams);
@@ -98,6 +101,16 @@ function App() {
       const packageId = selectedGenerator.constructor.manifest.package_id;
       SaveGeneratorConfig(packageId, JSON.stringify(newParams));
     }
+  };
+
+  const handleReset = () => {
+    if (!selectedGenerator) return;
+    const defaults = {};
+    flattenConfig(selectedGenerator.getConfig()).forEach(param => {
+      defaults[param.name] = param.default;
+    });
+    setGeneratorParams({ ...defaults });
+    setCanvasKey(prev => prev + 1); // Force le reset du canvas
   };
 
   return (
@@ -139,12 +152,14 @@ function App() {
             globalSettings={globalSettings}
             isRecording={isRecording}
             setIsRecording={setIsRecording}
+            canvasKey={canvasKey}
           />
           {/* Droite : configuration du générateur */}
           <GeneratorConfigPanel
             selectedGenerator={selectedGenerator}
             generatorParams={generatorParams}
             onParameterChange={handleParameterChange}
+            onReset={handleReset}
           />
         </div>
       </div>

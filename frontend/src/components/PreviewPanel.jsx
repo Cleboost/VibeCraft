@@ -2,7 +2,7 @@ import React from 'react';
 import { FileVideo, Clock, Monitor, Info } from 'lucide-react';
 import VideoCanvas from './VideoCanvas';
 
-const PreviewPanel = ({ generator, params, globalSettings, isRecording, setIsRecording }) => {
+const PreviewPanel = ({ generator, params, globalSettings, isRecording, setIsRecording, canvasKey }) => {
   const manifest = generator?.constructor?.manifest;
 
   return (
@@ -31,6 +31,7 @@ const PreviewPanel = ({ generator, params, globalSettings, isRecording, setIsRec
         params={params}
         globalSettings={globalSettings}
         onRecordingChange={setIsRecording}
+        canvasKey={canvasKey}
       />
       {/* Infos vidéo */}
       <div className="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4">

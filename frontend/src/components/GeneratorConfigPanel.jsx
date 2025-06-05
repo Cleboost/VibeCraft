@@ -1,16 +1,17 @@
 import React from 'react';
 import { Palette, RotateCcw } from 'lucide-react';
 import DynamicForm from './DynamicForm';
+import { flattenConfig } from '../utils/configUtils';
 
-const GeneratorConfigPanel = ({ selectedGenerator, generatorParams, onParameterChange }) => {
+const GeneratorConfigPanel = ({ selectedGenerator, generatorParams, onParameterChange, onReset }) => {
   // Fonction pour remettre la config par défaut
   const handleReset = () => {
     if (!selectedGenerator) return;
     const defaults = {};
-    selectedGenerator.getConfig().forEach(param => {
+    flattenConfig(selectedGenerator.getConfig()).forEach(param => {
       defaults[param.name] = param.default;
     });
-    onParameterChange(defaults);
+    onParameterChange({ ...defaults });
   };
 
   return (
@@ -41,7 +42,7 @@ const GeneratorConfigPanel = ({ selectedGenerator, generatorParams, onParameterC
           </div>
           <button
             className="mt-4 flex items-center justify-center w-full px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded transition text-xs font-medium"
-            onClick={handleReset}
+            onClick={onReset ? onReset : handleReset}
             type="button"
           >
             <RotateCcw className="w-4 h-4 mr-2" /> Réinitialiser
