@@ -2,7 +2,7 @@ import React from 'react';
 import { FileVideo, Clock, Monitor, Info } from 'lucide-react';
 import VideoCanvas from './VideoCanvas';
 
-const PreviewPanel = ({ generator, params, globalSettings, isRecording, setIsRecording, canvasKey }) => {
+const PreviewPanel = ({ generator, params, globalSettings, setIsRecording, canvasKey }) => {
   const manifest = generator?.constructor?.manifest;
 
   return (
