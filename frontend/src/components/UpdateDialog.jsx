@@ -21,15 +21,12 @@ const UpdateDialog = ({ isVisible, onClose }) => {
     }
   }, [isVisible]);
 
-  // Écouter les événements de progression en temps réel
   useEffect(() => {
     if (window.runtime) {
-      // Écouter les événements de progression de téléchargement
       window.runtime.EventsOn('download-progress', (progress) => {
         setDownloadProgress(progress.percent || 0);
       });
 
-      // Nettoyer les listeners quand le composant se démonte
       return () => {
         window.runtime.EventsOff('download-progress');
       };
@@ -68,7 +65,7 @@ const UpdateDialog = ({ isVisible, onClose }) => {
     try {
       const filePath = await DownloadUpdate(updateInfo.downloadUrl);
       setDownloadedFile(filePath);
-      setDownloadProgress(100); // S'assurer que c'est à 100% à la fin
+      setDownloadProgress(100); 
     } catch (err) {
       setError(`Erreur lors du téléchargement: ${err.message}`);
     } finally {
