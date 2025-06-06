@@ -60,25 +60,22 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
     canvas.width = width;
     canvas.height = height;
     
-    // Calculer un bitrate adapté à la résolution
     const pixelCount = width * height;
     let videoBitsPerSecond;
     if (pixelCount <= 1280 * 720) {
-      videoBitsPerSecond = 5000000; // 5 Mbps pour 720p
+      videoBitsPerSecond = 5000000; 
     } else if (pixelCount <= 1920 * 1080) {
-      videoBitsPerSecond = 8000000; // 8 Mbps pour 1080p
+      videoBitsPerSecond = 8000000; 
     } else if (pixelCount <= 2560 * 1440) {
-      videoBitsPerSecond = 12000000; // 12 Mbps pour 1440p
+      videoBitsPerSecond = 12000000; 
     } else {
-      videoBitsPerSecond = 20000000; // 20 Mbps pour 4K
+      videoBitsPerSecond = 20000000; 
     }
     
-    // Arrêter l'animation de prévisualisation et démarrer l'animation d'enregistrement
     stopAnimation();
     
     const stream = canvas.captureStream(globalSettings.framerate);
     
-    // Forcer WebM pour l'enregistrement initial, indépendamment du format final
     let mimeType = 'video/webm';
     const codecOptions = [
       'video/webm;codecs=vp9',
@@ -110,19 +107,15 @@ const VideoCanvas = ({ generator, params, globalSettings, onRecordingChange, can
       setRecordedVideo(blob);
       setIsRecording(false);
       onRecordingChange?.(false);
-      
-      // Reprendre la prévisualisation après l'enregistrement
       startPreview();
     };
 
     setIsRecording(true);
     onRecordingChange?.(true);
     
-    // Relancer l'animation pour l'enregistrement
     generator.setup(canvas, params);
     
-    // Démarrer l'enregistrement avec timeslice pour forcer la collection de données
-    mediaRecorderRef.current.start(100); // Collecte données toutes les 100ms
+    mediaRecorderRef.current.start(100); 
     
     const recordingAnimate = () => {
       generator.draw(canvas, params);
