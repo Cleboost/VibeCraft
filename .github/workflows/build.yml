@@ -94,7 +94,7 @@ jobs:
           tar -czf ../../release/VibeCraft-${{ matrix.platform.name }}-${{ matrix.platform.arch }}.tar.gz VibeCraft.app
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: VibeCraft-${{ matrix.platform.name }}-${{ matrix.platform.arch }}
           path: release/*
@@ -109,7 +109,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v5
+        uses: actions/download-artifact@v7
         with:
           path: artifacts
 
