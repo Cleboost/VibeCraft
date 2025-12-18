@@ -4,7 +4,7 @@ go 1.24.0
 
 require (
 	github.com/wailsapp/wails/v2 v2.11.0
-	golang.org/x/mod v0.29.0
+	golang.org/x/mod v0.31.0
 )
 
 require (
